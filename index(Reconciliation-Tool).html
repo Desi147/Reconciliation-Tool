@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>對帳工具 Reconciliation Tool</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1e3a8a;
+            font-size: 1.6rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 640px) {
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .section {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: #334155;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 4px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .input-group label {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sign-toggle-btn {
+            background-color: #e2e8f0;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .sign-toggle-btn:hover {
+            background-color: #cbd5e1;
+        }
+
+        .input-group input {
+            width: 120px;
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            text-align: right;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .denom-list .input-group label {
+            width: 90px;
+        }
+
+        .denom-list .subtotal {
+            width: 90px;
+            text-align: right;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            background: #edf2f7;
+            transition: all 0.3s ease;
+        }
+
+        .result-box.match {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .result-box.mismatch {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .result-box h3 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
+
+        .result-details {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        .btn-reset {
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #64748b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .btn-reset:hover {
+            background-color: #475569;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>💰 拆帳與對帳計算機</h1>
+
+    <div class="grid">
+        <!-- 帳目數據輸入區 -->
+        <div class="section">
+            <h2>1. 帳目數據</h2>
+            <div class="input-group">
+                <label for="revenue">今日總收入：</label>
+                <input type="number" id="revenue" placeholder="0" min="0" oninput="calculate()">
+            </div>
+            <div class="input-group">
+                <label for="expenditure">今日總支出：</label>
+                <input type="number" id="expenditure" placeholder="0" min="0" oninput="calculate()">
+            </div>
+            <div class="input-group">
+                <label for="computercount">電腦計算的值：</label>
+                <div class="input-wrapper">
+                    <button type="button" class="sign-toggle-btn" id="signBtn" onclick="toggleSign()">+</button>
+                    <input type="number" id="computercount" placeholder="0" oninput="handleComputerInput()">
+                </div>
+            </div>
+        </div>
+
+        <!-- 實體鈔票硬幣清點區 -->
+        <div class="section denom-list">
+            <h2>2. 抽屜面額清點 (輸入張數)</h2>
+            <div class="input-group"><label>2000</label><input type="number" class="denom" data-val="2000" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>1000</label><input type="number" class="denom" data-val="1000" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>500</label><input type="number" class="denom" data-val="500" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>200</label><input type="number" class="denom" data-val="200" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>100</label><input type="number" class="denom" data-val="100" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>50</label><input type="number" class="denom" data-val="50" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>10</label><input type="number" class="denom" data-val="10" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>5</label><input type="number" class="denom" data-val="5" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+            <div class="input-group"><label>1</label><input type="number" class="denom" data-val="1" placeholder="0" min="0" oninput="calculate()"><span class="subtotal">0 元</span></div>
+        </div>
+    </div>
+
+    <!-- 結果顯示區 -->
+    <div id="resultBox" class="result-box">
+        <h3 id="statusText">請輸入數據開始對帳</h3>
+        <div class="result-details">
+            <div>應有金額：<span id="expectedTotal">0</span> 元</div>
+            <div>抽屜總共：<span id="actualTotal">0</span> 元</div>
+            <div>相差：<span id="diffTotal">0</span> 元</div>
+        </div>
+    </div>
+
+    <button class="btn-reset" onclick="resetForm()">清空重新輸入</button>
+</div>
+
+<script>
+    let isNegative = false;
+
+    function toggleSign() {
+        isNegative = !isNegative;
+        const btn = document.getElementById('signBtn');
+        btn.textContent = isNegative ? '-' : '+';
+        btn.style.backgroundColor = isNegative ? '#fee2e2' : '#e2e8f0';
+        btn.style.color = isNegative ? '#991b1b' : '#334155';
+        
+        const computerInput = document.getElementById('computercount');
+        let val = computerInput.value;
+        if (val !== '') {
+            let numVal = Math.abs(parseFloat(val) || 0);
+            if (numVal !== 0) {
+                computerInput.value = isNegative ? -numVal : numVal;
+            }
+        }
+        calculate();
+    }
+
+    function handleComputerInput() {
+        const computerInput = document.getElementById('computercount');
+        const val = parseFloat(computerInput.value);
+        
+        if (!isNaN(val)) {
+            if (val < 0) {
+                isNegative = true;
+            } else if (val > 0) {
+                isNegative = false;
+            }
+            const btn = document.getElementById('signBtn');
+            btn.textContent = isNegative ? '-' : '+';
+            btn.style.backgroundColor = isNegative ? '#fee2e2' : '#e2e8f0';
+            btn.style.color = isNegative ? '#991b1b' : '#334155';
+        }
+        calculate();
+    }
+
+    function calculate() {
+        // 1. C++ 公式：result = revenue - expenditure + computercount
+        const revenue = parseFloat(document.getElementById('revenue').value) || 0;
+        const expenditure = parseFloat(document.getElementById('expenditure').value) || 0;
+        const computercount = parseFloat(document.getElementById('computercount').value) || 0;
+        const result = revenue - expenditure + computercount;
+
+        // 2. 計算抽屜實體面額總和
+        let total = 0;
+        const denomInputs = document.querySelectorAll('.denom');
+        
+        denomInputs.forEach(input => {
+            const count = parseInt(input.value) || 0;
+            const value = parseInt(input.getAttribute('data-val'));
+            const subtotal = count * value;
+            total += subtotal;
+            
+            // 更新單項小計
+            input.nextElementSibling.textContent = `${subtotal.toLocaleString()} 元`;
+        });
+
+        // 3. 計算差額：total - result
+        const diff = total - result;
+        const absDifference = Math.abs(diff);
+
+        // 4. 更新畫面顯示
+        document.getElementById('expectedTotal').textContent = result.toLocaleString();
+        document.getElementById('actualTotal').textContent = total.toLocaleString();
+        document.getElementById('diffTotal').textContent = absDifference.toLocaleString();
+
+        const resultBox = document.getElementById('resultBox');
+        const statusText = document.getElementById('statusText');
+
+        if (diff === 0) {
+            resultBox.className = 'result-box match';
+            statusText.textContent = '對帳無誤！';
+        } else if (diff > 0) {
+            resultBox.className = 'result-box mismatch';
+            statusText.textContent = `帳目有誤！抽屜多了 ${absDifference.toLocaleString()} 元！再算一次！`;
+        } else {
+            resultBox.className = 'result-box mismatch';
+            statusText.textContent = `帳目有誤！抽屜少了 ${absDifference.toLocaleString()} 元！再算一次！`;
+        }
+    }
+
+    function resetForm() {
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => input.value = '');
+        isNegative = false;
+        const btn = document.getElementById('signBtn');
+        btn.textContent = '+';
+        btn.style.backgroundColor = '#e2e8f0';
+        btn.style.color = '#334155';
+        calculate();
+    }
+
+    // 初始化計算
+    calculate();
+</script>
+
+</body>
+</html>
